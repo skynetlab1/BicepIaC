@@ -1,4 +1,36 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
-  "contentVersion": "1.0.0.0"
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "hubVnetName": {
+      "value": "hub-vnet"
+    },
+    "hubSubnetName": {
+      "value": "hub-subnet"
+    },
+    "devVnetName": {
+      "value": "dev-vnet"
+    },
+    "devSubnetName": {
+      "value": "dev-subnet"
+    },
+    "stageVnetName": {
+      "value": "stage-vnet"
+    },
+    "stageSubnetName": {
+      "value": "stage-subnet"
+    },
+    "prodVnetName": {
+      "value": "prod-vnet"
+    },
+    "prodSubnetName": {
+      "value": "prod-subnet"
+    },
+    "location": {
+      "value": "westeurope"
+    },
+    "aksClusterNamePrefix": {
+      "value": "pvaks-"
+    }
+  }
 }
