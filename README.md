@@ -59,4 +59,4 @@ Integrate with Azure Active Directory (Azure AD) for user authentication and aut
 Use Azure Policy to enforce security and compliance standards.
 This template provides a solid foundation for building a secure and scalable Hub and Spoke network topology in Azure, with AKS clusters and private link connections to ACR. By following the best practices and implementing further enhancements, you can ensure a robust and secure environment for your containerized applications.
 
-![Uploading BicepIaC.png…]()
+![BicepIaC](https://github.com/user-attachments/assets/95dcb421-cde5-495a-9279-d783ab439151)
