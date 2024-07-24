@@ -6,8 +6,8 @@ param stageVnetName string = 'stage-vnet'
 param stageSubnetName string = 'stage-subnet'
 param prodVnetName string = 'prod-vnet'
 param prodSubnetName string = 'prod-subnet'
-param location string = 'westus2'
-param aksClusterNamePrefix string = 'aks-'
+param location string = 'westeurope'
+// param aksClusterNamePrefix string  = 'aks-'
 
 // Hub Virtual Network
 resource hubVnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
@@ -96,7 +96,6 @@ resource prodVnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
 // VNet Peerings
 resource hubToDevPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-02-01' = {
   name: 'hub-to-dev'
-  location: location
   properties: {
     allowVirtualNetworkAccess: true
     allowForwardedTraffic: true
@@ -110,7 +109,6 @@ resource hubToDevPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerin
 
 resource hubToStagePeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-02-01' = {
   name: 'hub-to-stage'
-  location: location
   properties: {
     allowVirtualNetworkAccess: true
     allowForwardedTraffic: true
@@ -124,7 +122,6 @@ resource hubToStagePeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeer
 
 resource hubToProdPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-02-01' = {
   name: 'hub-to-prod'
-  location: location
   properties: {
     allowVirtualNetworkAccess: true
     allowForwardedTraffic: true
@@ -136,110 +133,115 @@ resource hubToProdPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeeri
   parent: hubVnet
 }
 
+// Dev Subnet
+resource devSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-02-01' = {
+  name: devSubnetName
+  parent: devVnet
+  properties: {
+    addressPrefix: '10.1.1.0/24'
+  }
+}
+
 // AKS Clusters in Spoke VNets
-resource devAksCluster 'Microsoft.ContainerService/managedClusters@2023-04-01' = {
-  name: '${aksClusterNamePrefix}dev'
+// 1. AKS Cluster in a Spoke VNET
+resource aksCluster 'Microsoft.ContainerService/managedClusters@2023-04-01' = {
+  name: 'devAksCluster'
   location: location
   properties: {
-    # ... other AKS cluster properties
-    networkProfile: {
-      networkPlugin: 'azure'
-      podCidr: '10.1.2.0/24'
-      serviceCidr: '10.1.3.0/24'
-      dnsServiceIP: '10.1.3.10'
-      dockerBridgeCidr: '172.17.0.1/16'
-      loadBalancerSku: 'standard'
-      loadBalancerProfile: {
-        managedOutboundIPs: {
-          count: 2
-        }
-        outboundIPPrefixes: {
-          publicIPPrefixes: [
-            {
-              name: 'aks-agentpool-outbound-pip-prefix'
-            }
-          ]
-        }
-      }
-    }
+    dnsPrefix: 'devAksCluster'
     agentPoolProfiles: [
       {
-        name: 'default'
-        # ... other agent pool properties
-        vnetSubnetID: devVnet.properties.subnets[0].id
+        name: 'nodepool1'
+        vmSize: 'Standard_B2s'
+        count: 1
+        osType: 'Linux'
+        vnetSubnetID: devSubnet.id // Assumes spokeVnetSubnetId is defined elsewhere
+      }
+    ],
+    identity: {
+      type: 'UserAssigned'
+      userAssignedIdentities: {
+        '${managedIdentity.id}': {}
+      }
+    }
+  }
+}
+
+// 2. Azure Container Registry
+resource acr 'Microsoft.ContainerRegistry/registries@2022-02-01-preview' = {
+  name: 'devAcr'
+  location: location
+  properties: {
+    adminUserEnabled: false
+  }
+  sku: {
+    name: 'Basic'
+  }
+}
+
+// 3. Managed Identity for AKS
+resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' = {
+  name: 'aksManagedIdentity'
+  location: location
+}
+
+// Private DNS Zone for AKS
+resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+  name: 'privatelink.<region>.azmk8s.io' // Replace <region> with the Azure region of your AKS clusters, e.g., westus2.azmk8s.io
+  location: 'global'
+}
+
+// Public IP Address for NAT Gateway
+resource publicIp 'Microsoft.Network/publicIPAddresses@2021-02-01' = {
+  name: 'aksPublicIp'
+  location: location
+  properties: {
+    publicIPAllocationMethod: 'Static'
+  }
+}
+
+// NAT Gateway for outbound connectivity
+resource natGateway 'Microsoft.Network/natGateways@2021-02-01' = {
+  name: 'aksNatGateway'
+  location: location
+  properties: {
+    publicIpAddresses: [
+      {
+        id: publicIp.id
       }
     ]
   }
 }
 
-// Stage AKS Cluster
-resource stageAksCluster 'Microsoft.ContainerService/managedClusters@2023-04-01' = {
-  name: '${aksClusterNamePrefix}stage'
-  location: location
+// Associate NAT Gateway with Dev VNet Subnet (Repeat for Stage and Prod as needed)
+resource devSubnetNatGateway 'Microsoft.Network/virtualNetworks/subnets@2021-02-01' = {
+  name: devSubnetName
+  parent: devVnet
   properties: {
-    # ... other AKS cluster properties
-    networkProfile: {
-      networkPlugin: 'azure'
-      podCidr: '10.2.2.0/24'
-      serviceCidr: '10.2.3.0/24'
-      dnsServiceIP: '10.2.3.10'
-      dockerBridgeCidr: '172.17.0.1/16'
-      loadBalancerSku: 'standard'
-      loadBalancerProfile: {
-        managedOutboundIPs: {
-          count: 2
-        }
-        outboundIPPrefixes: {
-          publicIPPrefixes: [
-            {
-              name: 'aks-agentpool-outbound-pip-prefix'
-            }
-          ]
-        }
-      }
+    natGateway: {
+      id: natGateway.id
     }
-    agentPoolProfiles: [
-      {
-        name: 'default'
-        # ... other agent pool properties
-        vnetSubnetID: stageVnet.properties.subnets[0].id
-      }
-    ]
   }
 }
 
-// Prod AKS Cluster
-resource prodAksCluster 'Microsoft.ContainerService/managedClusters@2023-04-01' = {
-  name: '${aksClusterNamePrefix}prod'
+// Private Link for Azure Container Registry (ACR)
+resource acrPrivateLink 'Microsoft.Network/privateEndpoints@2020-06-01' = {
+  name: 'acrPrivateEndpoint'
   location: location
   properties: {
-    # ... other AKS cluster properties
-    networkProfile: {
-      networkPlugin: 'azure'
-      podCidr: '10.3.2.0/24'
-      serviceCidr: '10.3.3.0/24'
-      dnsServiceIP: '10.3.3.10'
-      dockerBridgeCidr: '172.17.0.1/16'
-      loadBalancerSku: 'standard'
-      loadBalancerProfile: {
-        managedOutboundIPs: {
-          count: 2
-        }
-        outboundIPPrefixes: {
-          publicIPPrefixes: [
-            {
-              name: 'aks-agentpool-outbound-pip-prefix'
-            }
+    privateLinkServiceConnections: [
+      {
+        name: 'acrConnection'
+        properties: {
+          privateLinkServiceId: acr.id // Assumes acr resource is defined elsewhere in your Bicep file
+          groupIds: [
+            'registry'
           ]
         }
       }
-    }
-    agentPoolProfiles: [
-      {
-        name: 'default'
-        # ... other agent pool properties
-        vnetSubnetID: prodVnet.properties.subnets[0].id
-      }
     ]
+    subnet: {
+      id: devSubnet.id // Assumes devSubnet resource is defined elsewhere in your Bicep file
+    }
   }
 }
