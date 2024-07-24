@@ -1,5 +1,5 @@
-az deployment sub create --location westeurope --template-file main.bicep
+az deployment sub create --location westeurope --template-file template.json
 # OR using az
-azd auth login
-azd init
-azd up
+# azd auth login
+# azd init
+# azd up
