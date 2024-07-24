@@ -7,9 +7,13 @@ param stageSubnetName string = 'stage-subnet'
 param prodVnetName string = 'prod-vnet'
 param prodSubnetName string = 'prod-subnet'
 param location string = 'westeurope'
-// param aksClusterNamePrefix string  = 'aks-'
+param aksClusterNamePrefix string = 'pvaks-'
+var environmentName = 'dev' 
+var uniqueId = '001' 
+var aksClusterName = '${aksClusterNamePrefix}-${environmentName}-${uniqueId}'
 
-// Hub Virtual Network
+
+// Hub Virparam aksClusterNamePrefix string
 resource hubVnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
   name: hubVnetName
   location: location
@@ -133,20 +137,35 @@ resource hubToProdPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeeri
   parent: hubVnet
 }
 
-// Dev Subnet
-resource devSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-02-01' = {
-  name: devSubnetName
+resource devSubnet 'Microsoft.Network/virtualNetworks/subnets@2020-11-01' existing = {
+  name: 'dev-subnet'
   parent: devVnet
-  properties: {
-    addressPrefix: '10.1.1.0/24'
-  }
 }
 
-// AKS Clusters in Spoke VNets
-// 1. AKS Cluster in a Spoke VNET
-resource aksCluster 'Microsoft.ContainerService/managedClusters@2023-04-01' = {
-  name: 'devAksCluster'
+// Correctly associating a resource with the existing subnet
+resource myServicePrivateEndpoint 'Microsoft.Network/privateEndpoints@2020-11-01' = {
+  name: 'myServicePrivateEndpoint'
+  location: 'eastus'
+  properties: {
+    // Other properties
+    subnet: {
+      id: devSubnet.id
+    }
+  }
+}
+// 1. Managed Identity for AKS
+resource devManagedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' = {
+  name: 'aksManagedIdentity-dev' // Use unique name per environment
   location: location
+}
+
+// 2. AKS Cluster in a Spoke VNET
+resource devAksCluster 'Microsoft.ContainerService/managedClusters@2023-04-01' = {
+  name: aksClusterName
+  location: location
+  identity: {
+    type: 'SystemAssigned' // Use system-assigned managed identity
+  }
   properties: {
     dnsPrefix: 'devAksCluster'
     agentPoolProfiles: [
@@ -155,14 +174,20 @@ resource aksCluster 'Microsoft.ContainerService/managedClusters@2023-04-01' = {
         vmSize: 'Standard_B2s'
         count: 1
         osType: 'Linux'
-        vnetSubnetID: devSubnet.id // Assumes spokeVnetSubnetId is defined elsewhere
+        vnetSubnetID: devVnet.properties.subnets[0].id
+        type: 'VirtualMachineScaleSets'
+        mode: 'System'
       }
-    ],
-    identity: {
-      type: 'UserAssigned'
-      userAssignedIdentities: {
-        '${managedIdentity.id}': {}
-      }
+    ]
+    networkProfile: {
+      networkPlugin: 'azure'
+      loadBalancerSku: 'standard'
+      dnsServiceIP: '10.1.1.10'
+      serviceCidr: '10.1.1.0/24'
+      podCidr: '172.17.0.1/16'
+    }
+    apiServerAccessProfile: {
+      enablePrivateCluster: true
     }
   }
 }
@@ -179,28 +204,23 @@ resource acr 'Microsoft.ContainerRegistry/registries@2022-02-01-preview' = {
   }
 }
 
-// 3. Managed Identity for AKS
-resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' = {
-  name: 'aksManagedIdentity'
-  location: location
-}
+
 
 // Private DNS Zone for AKS
 resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
-  name: 'privatelink.<region>.azmk8s.io' // Replace <region> with the Azure region of your AKS clusters, e.g., westus2.azmk8s.io
+  name: 'privatelink.westeurope.azmk8s.io' // Replace <region> with the Azure region of your AKS clusters, e.g., westus2.azmk8s.io
   location: 'global'
 }
 
 // Public IP Address for NAT Gateway
 resource publicIp 'Microsoft.Network/publicIPAddresses@2021-02-01' = {
-  name: 'aksPublicIp'
+  name: 'aksPublicIP'
   location: location
   properties: {
     publicIPAllocationMethod: 'Static'
   }
 }
-
-// NAT Gateway for outbound connectivity
+  // NAT Gateway for outbound connectivity
 resource natGateway 'Microsoft.Network/natGateways@2021-02-01' = {
   name: 'aksNatGateway'
   location: location
@@ -210,6 +230,9 @@ resource natGateway 'Microsoft.Network/natGateways@2021-02-01' = {
         id: publicIp.id
       }
     ]
+  }
+  sku: {
+    name: 'Standard'
   }
 }
 
