@@ -1,11 +1,11 @@
-﻿{
+{
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
     "_generator": {
       "name": "bicep",
       "version": "0.29.47.4906",
-      "templateHash": "5342402501654508447"
+      "templateHash": "14684195559513653511"
     }
   },
   "parameters": {
@@ -296,15 +296,15 @@
     {
       "type": "Microsoft.Network/virtualNetworks/subnets",
       "apiVersion": "2021-02-01",
-      "name": "[format('{0}/{1}', parameters('devVnetName'), parameters('devSubnetName'))]",
+      "name": "[format('{0}/{1}', parameters('devVnetName'), format('{0}', parameters('devSubnetName')))]",
       "properties": {
         "natGateway": {
           "id": "[resourceId('Microsoft.Network/natGateways', 'aksNatGateway')]"
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks', parameters('devVnetName'))]",
-        "[resourceId('Microsoft.Network/natGateways', 'aksNatGateway')]"
+        "[resourceId('Microsoft.Network/natGateways', 'aksNatGateway')]",
+        "[resourceId('Microsoft.Network/virtualNetworks', parameters('devVnetName'))]"
       ]
     },
     {
