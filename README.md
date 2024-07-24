@@ -1,62 +1,75 @@
-Azure Hub and Spoke Network with AKS and ACR Private Link
-This Bicep template implements a Hub and Spoke network topology in Azure, with Azure Kubernetes Service (AKS) clusters deployed in spoke virtual networks and a private link connection to an Azure Container Registry (ACR).
+# Azure Developer CLI (azd) Bicep Starter
 
-Key Features:
+A starter blueprint for getting your application up on Azure using [Azure Developer CLI](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/overview) (azd). Add your application code, write Infrastructure as Code assets in [Bicep](https://aka.ms/bicep) to get your application up and running quickly.
 
-Hub and Spoke Network: Creates a central hub virtual network and three spoke virtual networks (Dev, Stage, Prod) with peering connections to the hub.
-AKS Clusters in Spoke VNets: Deploys AKS clusters in each spoke virtual network, leveraging system-assigned managed identities for authentication.
-Private Link for ACR: Establishes a private link connection between the AKS cluster and an ACR, enabling secure and private access to container images.
-NAT Gateway for Outbound Connectivity: Configures a NAT gateway for outbound connectivity from the AKS clusters, ensuring secure and controlled access to the internet.
-Private DNS Zone: Creates a private DNS zone for AKS, enabling name resolution within the virtual network.
-Prerequisites:
+The following assets have been provided:
 
-An Azure subscription.
-Azure CLI or PowerShell installed.
-Basic understanding of Azure networking concepts.
-Deployment:
+- Infrastructure-as-code (IaC) Bicep files under the `infra` folder that demonstrate how to provision resources and setup resource tagging for azd.
+- A [dev container](https://containers.dev) configuration file under the `.devcontainer` directory that installs infrastructure tooling by default. This can be readily used to create cloud-hosted developer environments such as [GitHub Codespaces](https://aka.ms/codespaces).
+- Continuous deployment workflows for CI providers such as GitHub Actions under the `.github` directory, and Azure Pipelines under the `.azdo` directory that work for most use-cases.
 
-Create a Resource Group:
-az group create --name <resource-group-name> --location <location>
-Generated code may be subject to license restrictions not shown here. Use code with care. Learn more 
+## Next Steps
 
-Deploy the Bicep Template:
-az deployment group create --resource-group <resource-group-name> --template-file <bicep-file-path> --parameters <parameters-file-path>
-Generated code may be subject to license restrictions not shown here. Use code with care. Learn more 
+### Step 1: Add application code
 
-Parameters:
+1. Initialize the service source code projects anywhere under the current directory. Ensure that all source code projects can be built successfully.
+    - > Note: For `function` services, it is recommended to initialize the project using the provided [quickstart tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-get-started).
+2. Once all service source code projects are building correctly, update `azure.yaml` to reference the source code projects.
+3. Run `azd package` to validate that all service source code projects can be built and packaged locally.
 
-hubVnetName: Name of the hub virtual network.
-hubSubnetName: Name of the subnet in the hub virtual network.
-devVnetName: Name of the Dev spoke virtual network.
-devSubnetName: Name of the subnet in the Dev spoke virtual network.
-stageVnetName: Name of the Stage spoke virtual network.
-stageSubnetName: Name of the subnet in the Stage spoke virtual network.
-prodVnetName: Name of the Prod spoke virtual network.
-prodSubnetName: Name of the subnet in the Prod spoke virtual network.
-location: Azure region for deployment.
-aksClusterNamePrefix: Prefix for the AKS cluster names.
-environmentName: Environment name for the AKS cluster (e.g., 'dev', 'stage', 'prod').
-uniqueId: Unique identifier for the AKS cluster.
-Usage:
+### Step 2: Provision Azure resources
 
-Modify the parameters in the Bicep template to match your desired configuration.
-Deploy the template using the Azure CLI or PowerShell commands provided above.
-Once deployed, you can access the AKS clusters and ACR through the private link connection.
-Security:
+Update or add Bicep files to provision the relevant Azure resources. This can be done incrementally, as the list of [Azure resources](https://learn.microsoft.com/en-us/azure/?product=popular) are explored and added.
 
-The AKS clusters use system-assigned managed identities for authentication, ensuring secure access to Azure resources.
-The private link connection to ACR provides secure and private access to container images.
-The NAT gateway enables controlled outbound connectivity from the AKS clusters.
-Best Practices:
+- A reference library that contains all of the Bicep modules used by the azd templates can be found [here](https://github.com/Azure-Samples/todo-nodejs-mongo/tree/main/infra/core).
+- All Azure resources available in Bicep format can be found [here](https://learn.microsoft.com/en-us/azure/templates/).
 
-Use unique names for all resources to avoid conflicts.
-Configure appropriate network security groups (NSGs) to restrict access to the AKS clusters and ACR.
-Monitor the AKS clusters and ACR for security events and vulnerabilities.
-Further Enhancements:
+Run `azd provision` whenever you want to ensure that changes made are applied correctly and work as expected.
 
-Implement a centralized logging and monitoring solution for the AKS clusters and ACR.
-Integrate with Azure Active Directory (Azure AD) for user authentication and authorization.
-Use Azure Policy to enforce security and compliance standards.
-This template provides a solid foundation for building a secure and scalable Hub and Spoke network topology in Azure, with AKS clusters and private link connections to ACR. By following the best practices and implementing further enhancements, you can ensure a robust and secure environment for your containerized applications.
+### Step 3: Tie in application and infrastructure
 
-![BicepIaC](https://github.com/user-attachments/assets/95dcb421-cde5-495a-9279-d783ab439151)
+Certain changes to Bicep files or deployment manifests are required to tie in application and infrastructure together. For example:
+
+1. Set up [application settings](#application-settings) for the code running in Azure to connect to other Azure resources.
+1. If you are accessing sensitive resources in Azure, set up [managed identities](#managed-identities) to allow the code running in Azure to securely access the resources.
+1. If you have secrets, it is recommended to store secrets in [Azure Key Vault](#azure-key-vault) that then can be retrieved by your application, with the use of managed identities.
+1. Configure [host configuration](#host-configuration) on your hosting platform to match your application's needs. This may include networking options, security options, or more advanced configuration that helps you take full advantage of Azure capabilities.
+
+For more details, see [additional details](#additional-details) below.
+
+When changes are made, use azd to validate and apply your changes in Azure, to ensure that they are working as expected:
+
+- Run `azd up` to validate both infrastructure and application code changes.
+- Run `azd deploy` to validate application code changes only.
+
+### Step 4: Up to Azure
+
+Finally, run `azd up` to run the end-to-end infrastructure provisioning (`azd provision`) and deployment (`azd deploy`) flow. Visit the service endpoints listed to see your application up-and-running!
+
+## Additional Details
+
+The following section examines different concepts that help tie in application and infrastructure.
+
+### Application settings
+
+It is recommended to have application settings managed in Azure, separating configuration from code. Typically, the service host allows for application settings to be defined.
+
+- For `appservice` and `function`, application settings should be defined on the Bicep resource for the targeted host. Reference template example [here](https://github.com/Azure-Samples/todo-nodejs-mongo/tree/main/infra).
+- For `aks`, application settings are applied using deployment manifests under the `<service>/manifests` folder. Reference template example [here](https://github.com/Azure-Samples/todo-nodejs-mongo-aks/tree/main/src/api/manifests).
+
+### Managed identities
+
+[Managed identities](https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview) allows you to secure communication between services. This is done without having the need for you to manage any credentials.
+
+### Azure Key Vault
+
+[Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/overview) allows you to store secrets securely. Your application can access these secrets securely through the use of managed identities.
+
+### Host configuration
+
+For `appservice`, the following host configuration options are often modified:
+
+- Language runtime version
+- Exposed port from the running container (if running a web service)
+- Allowed origins for CORS (Cross-Origin Resource Sharing) protection (if running a web service backend with a frontend)
+- The run command that starts up your service
