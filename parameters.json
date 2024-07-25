@@ -1,0 +1,15 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "environmentName": {
+            "value": "pvaks-dev"
+        },
+        "location": {
+            "value": "westeurope"
+        },
+        "principalId": {
+            "value": "0229702b-2b28-4435-b103-d8938b5fb22a"
+        }
+    }
+}

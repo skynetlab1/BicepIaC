@@ -1,256 +1,286 @@
-param hubVnetName string = 'hub-vnet'
-param hubSubnetName string = 'hub-subnet'
-param devVnetName string = 'dev-vnet'
-param devSubnetName string = 'dev-subnet'
-param stageVnetName string = 'stage-vnet'
-param stageSubnetName string = 'stage-subnet'
-param prodVnetName string = 'prod-vnet'
-param prodSubnetName string = 'prod-subnet'
-param location string = 'westeurope'
-param aksClusterNamePrefix string = 'pvaks-'
+targetScope = 'subscription'
 
-var environmentName = 'dev'
-var uniqueId = '001'
-var aksClusterName = '${aksClusterNamePrefix}-${environmentName}-${uniqueId}'
+@description('Name of the environment that can be used as part of naming resource convention')
+@minLength(1)
+@maxLength(64)
+param environmentName string
 
-resource hubVnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
-  name: hubVnetName
+@description('Primary location for all resources')
+@minLength(1)
+param location string
+
+@description('Id of the user or app to assign application roles')
+param principalId string
+
+var _fxv_0 = {
+  analysisServicesServers: 'as'
+  apiManagementService: 'apim-'
+  appConfigurationStores: 'appcs-'
+  appManagedEnvironments: 'cae-'
+  appContainerApps: 'ca-'
+  authorizationPolicyDefinitions: 'policy-'
+  automationAutomationAccounts: 'aa-'
+  blueprintBlueprints: 'bp-'
+  blueprintBlueprintsArtifacts: 'bpa-'
+  cacheRedis: 'redis-'
+  cdnProfiles: 'cdnp-'
+  cdnProfilesEndpoints: 'cdne-'
+  cognitiveServicesAccounts: 'cog-'
+  cognitiveServicesFormRecognizer: 'cog-fr-'
+  cognitiveServicesTextAnalytics: 'cog-ta-'
+  computeAvailabilitySets: 'avail-'
+  computeCloudServices: 'cld-'
+  computeDiskEncryptionSets: 'des'
+  computeDisks: 'disk'
+  computeDisksOs: 'osdisk'
+  computeGalleries: 'gal'
+  computeSnapshots: 'snap-'
+  computeVirtualMachines: 'vm'
+  computeVirtualMachineScaleSets: 'vmss-'
+  containerInstanceContainerGroups: 'ci'
+  containerRegistryRegistries: 'cr'
+  containerServiceManagedClusters: 'aks-'
+  databricksWorkspaces: 'dbw-'
+  dataFactoryFactories: 'adf-'
+  dataLakeAnalyticsAccounts: 'dla'
+  dataLakeStoreAccounts: 'dls'
+  dataMigrationServices: 'dms-'
+  dBforMySQLServers: 'mysql-'
+  dBforPostgreSQLServers: 'psql-'
+  devicesIotHubs: 'iot-'
+  devicesProvisioningServices: 'provs-'
+  devicesProvisioningServicesCertificates: 'pcert-'
+  documentDBDatabaseAccounts: 'cosmos-'
+  eventGridDomains: 'evgd-'
+  eventGridDomainsTopics: 'evgt-'
+  eventGridEventSubscriptions: 'evgs-'
+  eventHubNamespaces: 'evhns-'
+  eventHubNamespacesEventHubs: 'evh-'
+  hdInsightClustersHadoop: 'hadoop-'
+  hdInsightClustersHbase: 'hbase-'
+  hdInsightClustersKafka: 'kafka-'
+  hdInsightClustersMl: 'mls-'
+  hdInsightClustersSpark: 'spark-'
+  hdInsightClustersStorm: 'storm-'
+  hybridComputeMachines: 'arcs-'
+  insightsActionGroups: 'ag-'
+  insightsComponents: 'appi-'
+  keyVaultVaults: 'kv-'
+  kubernetesConnectedClusters: 'arck'
+  kustoClusters: 'dec'
+  kustoClustersDatabases: 'dedb'
+  logicIntegrationAccounts: 'ia-'
+  logicWorkflows: 'logic-'
+  machineLearningServicesWorkspaces: 'mlw-'
+  managedIdentityUserAssignedIdentities: 'id-'
+  managementManagementGroups: 'mg-'
+  migrateAssessmentProjects: 'migr-'
+  networkApplicationGateways: 'agw-'
+  networkApplicationSecurityGroups: 'asg-'
+  networkAzureFirewalls: 'afw-'
+  networkBastionHosts: 'bas-'
+  networkConnections: 'con-'
+  networkDnsZones: 'dnsz-'
+  networkExpressRouteCircuits: 'erc-'
+  networkFirewallPolicies: 'afwp-'
+  networkFirewallPoliciesWebApplication: 'waf'
+  networkFirewallPoliciesRuleGroups: 'wafrg'
+  networkFrontDoors: 'fd-'
+  networkFrontdoorWebApplicationFirewallPolicies: 'fdfp-'
+  networkLoadBalancersExternal: 'lbe-'
+  networkLoadBalancersInternal: 'lbi-'
+  networkLoadBalancersInboundNatRules: 'rule-'
+  networkLocalNetworkGateways: 'lgw-'
+  networkNatGateways: 'ng-'
+  networkNetworkInterfaces: 'nic-'
+  networkNetworkSecurityGroups: 'nsg-'
+  networkNetworkSecurityGroupsSecurityRules: 'nsgsr-'
+  networkNetworkWatchers: 'nw-'
+  networkPrivateDnsZones: 'pdnsz-'
+  networkPrivateLinkServices: 'pl-'
+  networkPublicIPAddresses: 'pip-'
+  networkPublicIPPrefixes: 'ippre-'
+  networkRouteFilters: 'rf-'
+  networkRouteTables: 'rt-'
+  networkRouteTablesRoutes: 'udr-'
+  networkTrafficManagerProfiles: 'traf-'
+  networkVirtualNetworkGateways: 'vgw-'
+  networkVirtualNetworks: 'vnet-'
+  networkVirtualNetworksSubnets: 'snet-'
+  networkVirtualNetworksVirtualNetworkPeerings: 'peer-'
+  networkVirtualWans: 'vwan-'
+  networkVpnGateways: 'vpng-'
+  networkVpnGatewaysVpnConnections: 'vcn-'
+  networkVpnGatewaysVpnSites: 'vst-'
+  notificationHubsNamespaces: 'ntfns-'
+  notificationHubsNamespacesNotificationHubs: 'ntf-'
+  operationalInsightsWorkspaces: 'log-'
+  portalDashboards: 'dash-'
+  powerBIDedicatedCapacities: 'pbi-'
+  purviewAccounts: 'pview-'
+  recoveryServicesVaults: 'rsv-'
+  resourcesResourceGroups: 'rg-'
+  searchSearchServices: 'srch-'
+  serviceBusNamespaces: 'sb-'
+  serviceBusNamespacesQueues: 'sbq-'
+  serviceBusNamespacesTopics: 'sbt-'
+  serviceEndPointPolicies: 'se-'
+  serviceFabricClusters: 'sf-'
+  signalRServiceSignalR: 'sigr'
+  sqlManagedInstances: 'sqlmi-'
+  sqlServers: 'sql-'
+  sqlServersDataWarehouse: 'sqldw-'
+  sqlServersDatabases: 'sqldb-'
+  sqlServersDatabasesStretch: 'sqlstrdb-'
+  storageStorageAccounts: 'st'
+  storageStorageAccountsVm: 'stvm'
+  storSimpleManagers: 'ssimp'
+  streamAnalyticsCluster: 'asa-'
+  synapseWorkspaces: 'syn'
+  synapseWorkspacesAnalyticsWorkspaces: 'synw'
+  synapseWorkspacesSqlPoolsDedicated: 'syndp'
+  synapseWorkspacesSqlPoolsSpark: 'synsp'
+  timeSeriesInsightsEnvironments: 'tsi-'
+  webServerFarms: 'plan-'
+  webSitesAppService: 'app-'
+  webSitesAppServiceEnvironment: 'ase-'
+  webSitesFunctions: 'func-'
+  webStaticSites: 'stapp-'
+}
+var tags = {
+  'azd-env-name': environmentName
+}
+var abbrs = _fxv_0
+var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
+
+resource rg_environment 'Microsoft.Resources/resourceGroups@2022-09-01' = {
+  name: 'rg-${environmentName}'
   location: location
-  properties: {
-    addressSpace: {
-      addressPrefixes: [
-        '10.0.0.0/16'
-      ]
-    }
-    subnets: [
-      {
-        name: hubSubnetName
-        properties: {
-          addressPrefix: '10.0.1.0/24'
-        }
-      }
-    ]
-  }
+  tags: tags
 }
 
-resource devVnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
-  name: devVnetName
-  location: location
-  properties: {
-    addressSpace: {
-      addressPrefixes: [
-        '10.1.0.0/16'
-      ]
-    }
-    subnets: [
-      {
-        name: devSubnetName
-        properties: {
-          addressPrefix: '10.1.1.0/24'
-        }
-      }
-    ]
-  }
-}
-
-resource stageVnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
-  name: stageVnetName
-  location: location
-  properties: {
-    addressSpace: {
-      addressPrefixes: [
-        '10.2.0.0/16'
-      ]
-    }
-    subnets: [
-      {
-        name: stageSubnetName
-        properties: {
-          addressPrefix: '10.2.1.0/24'
-        }
-      }
-    ]
-  }
-}
-
-resource prodVnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
-  name: prodVnetName
-  location: location
-  properties: {
-    addressSpace: {
-      addressPrefixes: [
-        '10.3.0.0/16'
-      ]
-    }
-    subnets: [
-      {
-        name: prodSubnetName
-        properties: {
-          addressPrefix: '10.3.1.0/24'
-        }
-      }
-    ]
-  }
-}
-
-resource hubVnetName_hub_to_dev 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-02-01' = {
-  parent: hubVnet
-  name: 'hub-to-dev'
-  properties: {
-    allowVirtualNetworkAccess: true
-    allowForwardedTraffic: true
-    useRemoteGateways: true
-    remoteVirtualNetwork: {
-      id: devVnet.id
-    }
-  }
-}
-
-resource hubVnetName_hub_to_stage 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-02-01' = {
-  parent: hubVnet
-  name: 'hub-to-stage'
-  properties: {
-    allowVirtualNetworkAccess: true
-    allowForwardedTraffic: true
-    useRemoteGateways: true
-    remoteVirtualNetwork: {
-      id: stageVnet.id
-    }
-  }
-}
-
-resource hubVnetName_hub_to_prod 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-02-01' = {
-  parent: hubVnet
-  name: 'hub-to-prod'
-  properties: {
-    allowVirtualNetworkAccess: true
-    allowForwardedTraffic: true
-    useRemoteGateways: true
-    remoteVirtualNetwork: {
-      id: prodVnet.id
-    }
-  }
-}
-
-resource myServicePrivateEndpoint 'Microsoft.Network/privateEndpoints@2020-11-01' = {
-  name: 'myServicePrivateEndpoint'
-  location: 'eastus'
-  properties: {
-    subnet: {
-      id: resourceId('Microsoft.Network/virtualNetworks/subnets', devVnetName, 'dev-subnet')
-    }
+module monitoring './nested_monitoring.bicep' = {
+  name: 'monitoring'
+  scope: resourceGroup('rg-${environmentName}')
+  params: {
+    location: location
+    tags: tags
+    logAnalyticsName: '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
+    applicationInsightsName: '${abbrs.insightsComponents}${resourceToken}'
   }
   dependsOn: [
-    devVnet
+    subscriptionResourceId('Microsoft.Resources/resourceGroups', 'rg-${environmentName}')
   ]
 }
 
-resource aksManagedIdentity_dev 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' = {
-  name: 'aksManagedIdentity-dev'
-  location: location
-}
-
-resource aksCluster 'Microsoft.ContainerService/managedClusters@2023-04-01' = {
-  name: aksClusterName
-  location: location
-  identity: {
-    type: 'SystemAssigned'
-  }
-  properties: {
-    dnsPrefix: 'devAksCluster'
-    agentPoolProfiles: [
-      {
-        name: 'nodepool1'
-        vmSize: 'Standard_B2s'
-        count: 1
-        osType: 'Linux'
-        vnetSubnetID: reference(devVnet.id, '2023-02-01').subnets[0].id
-        type: 'VirtualMachineScaleSets'
-        mode: 'System'
-      }
-    ]
-    networkProfile: {
-      networkPlugin: 'azure'
-      loadBalancerSku: 'standard'
-      dnsServiceIP: '10.1.1.10'
-      serviceCidr: '10.1.1.0/24'
-      podCidr: '172.17.0.1/16'
-    }
-    apiServerAccessProfile: {
-      enablePrivateCluster: true
-    }
-  }
-}
-
-resource devAcr 'Microsoft.ContainerRegistry/registries@2022-02-01-preview' = {
-  name: 'devAcr'
-  location: location
-  properties: {
-    adminUserEnabled: false
-  }
-  sku: {
-    name: 'Basic'
-  }
-}
-
-resource privatelink_westeurope_azmk8s_io 'Microsoft.Network/privateDnsZones@2020-06-01' = {
-  name: 'privatelink.westeurope.azmk8s.io'
-  location: 'global'
-}
-
-resource aksPublicIP 'Microsoft.Network/publicIPAddresses@2021-02-01' = {
-  name: 'aksPublicIP'
-  location: location
-  properties: {
-    publicIPAllocationMethod: 'Static'
-  }
-}
-
-resource aksNatGateway 'Microsoft.Network/natGateways@2021-02-01' = {
-  name: 'aksNatGateway'
-  location: location
-  properties: {
-    publicIpAddresses: [
-      {
-        id: aksPublicIP.id
-      }
-    ]
-  }
-  sku: {
-    name: 'Standard'
-  }
-}
-
-resource devVnetName_devSubnet 'Microsoft.Network/virtualNetworks/subnets@2021-02-01' = {
-  parent: devVnet
-  name: '${devSubnetName}'
-  properties: {
-    natGateway: {
-      id: aksNatGateway.id
-    }
-  }
-}
-
-resource acrPrivateEndpoint 'Microsoft.Network/privateEndpoints@2020-06-01' = {
-  name: 'acrPrivateEndpoint'
-  location: location
-  properties: {
-    privateLinkServiceConnections: [
-      {
-        name: 'acrConnection'
-        properties: {
-          privateLinkServiceId: devAcr.id
-          groupIds: [
-            'registry'
-          ]
-        }
-      }
-    ]
-    subnet: {
-      id: resourceId('Microsoft.Network/virtualNetworks/subnets', devVnetName, 'dev-subnet')
-    }
+module dashboard './nested_dashboard.bicep' = {
+  name: 'dashboard'
+  scope: resourceGroup('rg-${environmentName}')
+  params: {
+    name: '${abbrs.portalDashboards}${resourceToken}'
+    applicationInsightsName: reference(
+      extensionResourceId(
+        '/subscriptions/${subscription().subscriptionId}/resourceGroups/rg-${environmentName}',
+        'Microsoft.Resources/deployments',
+        'monitoring'
+      ),
+      '2022-09-01'
+    ).outputs.applicationInsightsName.value
+    location: location
+    tags: tags
   }
   dependsOn: [
-    devVnet
+    extensionResourceId(
+      '/subscriptions/${subscription().subscriptionId}/resourceGroups/rg-${environmentName}',
+      'Microsoft.Resources/deployments',
+      'monitoring'
+    )
+    subscriptionResourceId('Microsoft.Resources/resourceGroups', 'rg-${environmentName}')
   ]
 }
+
+module registry './nested_registry.bicep' = {
+  name: 'registry'
+  scope: resourceGroup('rg-${environmentName}')
+  params: {
+    location: location
+    tags: tags
+    name: '${abbrs.containerRegistryRegistries}${resourceToken}'
+  }
+  dependsOn: [
+    subscriptionResourceId('Microsoft.Resources/resourceGroups', 'rg-${environmentName}')
+  ]
+}
+
+module keyvault './nested_keyvault.bicep' = {
+  name: 'keyvault'
+  scope: resourceGroup('rg-${environmentName}')
+  params: {
+    location: location
+    tags: tags
+    name: '${abbrs.keyVaultVaults}${resourceToken}'
+    principalId: principalId
+  }
+  dependsOn: [
+    subscriptionResourceId('Microsoft.Resources/resourceGroups', 'rg-${environmentName}')
+  ]
+}
+
+module apps_env './nested_apps_env.bicep' = {
+  name: 'apps-env'
+  scope: resourceGroup('rg-${environmentName}')
+  params: {
+    name: '${abbrs.appManagedEnvironments}${resourceToken}'
+    location: location
+    tags: tags
+    applicationInsightsName: reference(
+      extensionResourceId(
+        '/subscriptions/${subscription().subscriptionId}/resourceGroups/rg-${environmentName}',
+        'Microsoft.Resources/deployments',
+        'monitoring'
+      ),
+      '2022-09-01'
+    ).outputs.applicationInsightsName.value
+    logAnalyticsWorkspaceName: reference(
+      extensionResourceId(
+        '/subscriptions/${subscription().subscriptionId}/resourceGroups/rg-${environmentName}',
+        'Microsoft.Resources/deployments',
+        'monitoring'
+      ),
+      '2022-09-01'
+    ).outputs.logAnalyticsWorkspaceName.value
+  }
+  dependsOn: [
+    extensionResourceId(
+      '/subscriptions/${subscription().subscriptionId}/resourceGroups/rg-${environmentName}',
+      'Microsoft.Resources/deployments',
+      'monitoring'
+    )
+    subscriptionResourceId('Microsoft.Resources/resourceGroups', 'rg-${environmentName}')
+  ]
+}
+
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string = reference(
+  extensionResourceId(
+    '/subscriptions/${subscription().subscriptionId}/resourceGroups/rg-${environmentName}',
+    'Microsoft.Resources/deployments',
+    'registry'
+  ),
+  '2022-09-01'
+).outputs.loginServer.value
+output AZURE_KEY_VAULT_NAME string = reference(
+  extensionResourceId(
+    '/subscriptions/${subscription().subscriptionId}/resourceGroups/rg-${environmentName}',
+    'Microsoft.Resources/deployments',
+    'keyvault'
+  ),
+  '2022-09-01'
+).outputs.name.value
+output AZURE_KEY_VAULT_ENDPOINT string = reference(
+  extensionResourceId(
+    '/subscriptions/${subscription().subscriptionId}/resourceGroups/rg-${environmentName}',
+    'Microsoft.Resources/deployments',
+    'keyvault'
+  ),
+  '2022-09-01'
+).outputs.endpoint.value
